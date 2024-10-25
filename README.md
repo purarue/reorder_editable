@@ -15,19 +15,19 @@ _Sidenote_: A namespace package is typically installed using `setuptools.find_na
 
 So, an editable, namespace package is multiple directories on disk all installed as a single package. If any changes are made to any of the directories, the package updates immediately.
 
-This is the current strategy [HPI](https://github.com/karlicoss/HPI) uses for extension. I can keep up to date with [upstream](https://github.com/karlicoss/HPI) and manage [my own modules](https://github.com/seanbreckenridge/HPI) by installing both (or more) like:
+This is the current strategy [HPI](https://github.com/karlicoss/HPI) uses for extension. I can keep up to date with [upstream](https://github.com/karlicoss/HPI) and manage [my own modules](https://github.com/purarue/HPI) by installing both (or more) like:
 
 ```
 pip install -e /local/clone/of/karlicoss/HPI
-pip install -e /local/clone/of/seanbreckenridge/HPI
+pip install -e /local/clone/of/purarue/HPI
 ```
 
 This creates a file in your python installation that looks like this:
 
 ```bash
 $ cat ~/.local/lib/python3.9/site-packages/easy-install.pth
-/home/sean/Repos/karlicoss/HPI
-/home/sean/Repos/seanbreckenridge/HPI
+/home/username/Repos/karlicoss/HPI
+/home/username/Repos/purarue/HPI
 ```
 
 ... to link those installs to the paths you specified.
@@ -69,7 +69,7 @@ Now - to the problem this aims to solve.
 
 There is no way to manage your `easy-install.pth` file, to make sure packages are in a defined order.
 
-In particular, I want [my repository](https://github.com/seanbreckenridge/HPI) to be above [my fork of the upstream repo](https://github.com/seanbreckenridge/HPI-fork), as that means I'm able to override files from upstream with my own changes, while maintaining two separate directories - which prevents me from running into merge conflicts. While developing, I may end up uninstalling/reinstalling one or more of my local clones of the `HPI` packages, and that leads to it resolving to a file from the upstream repository, when I was expecting my own -- leading to confusing and difficult to debug errors.
+In particular, I want [my repository](https://github.com/purarue/HPI) to be above [my fork of the upstream repo](https://github.com/purarue/HPI-fork), as that means I'm able to override files from upstream with my own changes, while maintaining two separate directories - which prevents me from running into merge conflicts. While developing, I may end up uninstalling/reinstalling one or more of my local clones of the `HPI` packages, and that leads to it resolving to a file from the upstream repository, when I was expecting my own -- leading to confusing and difficult to debug errors.
 
 The script itself is pretty basic. All `easy-install.pth` is lines of absolute paths pointing to directories, so this just takes the directories you pass as positional arguments and makes sure they're in that order in your `easy-install.pth` file by shuffling it around.
 
@@ -86,7 +86,7 @@ def repo(name: str) -> str:
     return path.join(environ["REPOS"], name)
 
 
-# https://github.com/seanbreckenridge/reorder_editable
+# https://github.com/purarue/reorder_editable
 # if my easy-install.pth file was ordered wrong, fix it and exit!
 from reorder_editable import Editable
 
@@ -163,7 +163,7 @@ $ python3 -m reorder_editable reorder ./my_HPI ./upstream_HPI
 ### Tests
 
 ```bash
-git clone 'https://github.com/seanbreckenridge/reorder_editable'
+git clone 'https://github.com/purarue/reorder_editable'
 cd ./reorder_editable
 pip install '.[testing]'
 mypy ./reorder_editable
