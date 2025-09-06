@@ -103,7 +103,7 @@ Note: Either install all editable packages as `--user`, or all at the system lev
 
 ## Installation
 
-Requires `python3.7+`
+Requires `python3.9+`
 
 To install with pip, run:
 
