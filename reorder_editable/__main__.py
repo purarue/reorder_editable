@@ -4,14 +4,14 @@ CLI code, which allows the user to pass relative or absolute paths
 
 import os
 import sys
-from typing import Sequence, List, Callable, Optional
+from typing import Sequence, Callable
 
 import click
 
 from .core import Editable, ReorderEditableError
 
 
-def absdirs(positionals: Sequence[str]) -> List[str]:
+def absdirs(positionals: Sequence[str]) -> list[str]:
     """
     Convert all paths to abolsute paths, and make sure they all exist
     """
@@ -36,7 +36,7 @@ def _resolve_editable(*, use_user_site: bool) -> str:
     """
     Find the default easy-install.pth. Exits if a file couldn't be found
     """
-    editable_pth: Optional[str] = Editable.locate_editable(use_user_site=use_user_site)
+    editable_pth: str | None = Editable.locate_editable(use_user_site=use_user_site)
     if editable_pth is None:
         raise ReorderEditableError("Could not locate easy-install.pth")
     return editable_pth
@@ -46,7 +46,7 @@ def _print_editable_contents(
     use_user_site: bool,
     *,
     stderr: bool = False,
-    chosen_editable: Optional[str] = None,
+    chosen_editable: str | None = None,
 ) -> None:
     """
     Opens the editable file directly and prints its contents
@@ -105,6 +105,13 @@ SHARED = [
         default=None,
         help="Manually provide path to easy-install.pth",
     ),
+    click.option(
+        "--create-custom",
+        "create_custom",
+        is_flag=True,
+        default=False,
+        help="Dont edit the existing easy-install.pth, create a custom one (e.g. at _00_my_custom_editable.pth to add to the PYTHONPATH first",
+    ),
     click.argument("DIRECTORY", nargs=-1, required=True),
 ]
 
@@ -122,7 +129,11 @@ def shared(func: Callable[..., None]) -> Callable[..., None]:
 @shared
 @site_option
 def check(
-    *, editable_pth: Optional[str], directory: Sequence[str], use_user_site: bool
+    *,
+    editable_pth: str | None,
+    directory: Sequence[str],
+    create_custom: bool,
+    use_user_site: bool,
 ) -> None:
     """
     If the order specified in your easy-install.pth doesn't match
@@ -140,9 +151,17 @@ def check(
     """
     dirs = absdirs(directory)
     try:
-        Editable(location=editable_pth, use_user_site=use_user_site).assert_ordered(
-            dirs
+        e = Editable(
+            location=editable_pth,
+            use_user_site=use_user_site,
+            allow_missing=create_custom is True,
         )
+        if create_custom is True and not os.path.exists(e.location):
+            click.echo(
+                (f"Cannot check a non-existing file {e.location} with --create-custom")
+            )
+            sys.exit(2)
+        e.assert_ordered(dirs)
     except ReorderEditableError as exc:
         click.echo("Error: " + str(exc))
         _print_editable_contents(
@@ -155,7 +174,11 @@ def check(
 @shared
 @site_option
 def reorder(
-    *, editable_pth: Optional[str], directory: Sequence[str], use_user_site: bool
+    *,
+    editable_pth: str | None,
+    directory: Sequence[str],
+    create_custom: bool,
+    use_user_site: bool,
 ) -> None:
     """
     If the order specified in your easy-install.pth doesn't match
@@ -177,7 +200,15 @@ def reorder(
     """
     dirs = absdirs(directory)
     try:
-        Editable(location=editable_pth, use_user_site=use_user_site).reorder(dirs)
+        e = Editable(
+            location=editable_pth,
+            use_user_site=use_user_site,
+            allow_missing=create_custom is True,
+        )
+        if create_custom:
+            e._create_custom_editable(dirs)
+        else:
+            e.reorder(dirs)
     except ReorderEditableError as exc:
         click.echo("Error: " + str(exc))
         _print_editable_contents(

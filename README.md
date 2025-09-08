@@ -101,9 +101,17 @@ if Editable().reorder([repo("HPI"), repo("HPI-fork")]):
 
 Note: Either install all editable packages as `--user`, or all at the system level. Otherwise, the lines of text/packages are split across two separate `easy-install.pth` files, and its not possible to reorder.
 
+## Custom editable.pth files
+
+Instead of editing the default `.pth` file, you can pass a custom location in your user `site` directory, and pass the `--create-custom` flag to create the file if its missing.
+
+The usage for this is slightly confusing, but since [PEP517](https://peps.python.org/pep-0517/), and [setuptools version 25.3](https://github.com/pypa/pip/issues/13522)
+
+TODO: mention https://github.com/python/cpython/blob/65c285062ce2769249610348636d3d73153e0144/Lib/site.py#L207-L229
+
 ## Installation
 
-Requires `python3.9+`
+Requires `python3.10+`
 
 To install with pip, run:
 
