@@ -36,13 +36,18 @@ class Editable:
         else:
             self.location = location
 
+        self.lines: list[str] = []
         if allow_missing is False:
             assert os.path.exists(
                 self.location
             ), f"The easy-install.pth file at '{self.location}' doesn't exist"
-            self.lines: list[str] = self.read_lines()
         else:
-            self.lines = []
+            # if allow_missing=True, and the file doesn't exist, then
+            # skip read_lines, we will manually populate them below in
+            # _create_custom_editable
+            if not os.path.exists(self.location):
+                return
+        self.lines = self.read_lines()
 
     def read_lines(self) -> list[str]:
         """

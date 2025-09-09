@@ -206,6 +206,8 @@ def reorder(
             allow_missing=create_custom is True,
         )
         if create_custom:
+            # if the file already exists,
+            # it will call reorder internally
             e._create_custom_editable(dirs)
         else:
             e.reorder(dirs)
