@@ -4,7 +4,6 @@ Core functionality, reads/writes to the editable and checks if order matches wha
 
 import os
 import site
-from typing import Optional, List, Tuple
 
 
 class ReorderEditableError(FileNotFoundError):
@@ -19,7 +18,11 @@ class Editable:
     """
 
     def __init__(
-        self, *, location: Optional[str] = None, use_user_site: bool = True
+        self,
+        *,
+        location: str | None = None,
+        use_user_site: bool = True,
+        allow_missing: bool = False,
     ) -> None:
         """
         can optionally pass a location, to prevent the locate_editable editable call
@@ -33,12 +36,20 @@ class Editable:
         else:
             self.location = location
 
-        assert os.path.exists(
-            self.location
-        ), f"The easy-install.pth file at '{self.location}' doesn't exist"
-        self.lines: List[str] = self.read_lines()
+        self.lines: list[str] = []
+        if allow_missing is False:
+            assert os.path.exists(
+                self.location
+            ), f"The easy-install.pth file at '{self.location}' doesn't exist"
+        else:
+            # if allow_missing=True, and the file doesn't exist, then
+            # skip read_lines, we will manually populate them below in
+            # _create_custom_editable
+            if not os.path.exists(self.location):
+                return
+        self.lines = self.read_lines()
 
-    def read_lines(self) -> List[str]:
+    def read_lines(self) -> list[str]:
         """
         Read lines from the editable path file
 
@@ -48,7 +59,7 @@ class Editable:
             self.lines = src.read().splitlines()
         return self.lines
 
-    def write_lines(self, new_lines: List[str]) -> None:
+    def write_lines(self, new_lines: list[str]) -> None:
         """
         Write lines back to the editable path file
 
@@ -59,7 +70,30 @@ class Editable:
             for line in new_lines:
                 target.write(f"{line}\n")
 
-    def assert_ordered(self, expected: List[str]) -> None:
+    def _create_custom_editable(self, lines: list[str]) -> bool:
+        """
+        This creates a custom easy-install.pth file at self.location
+
+        If it doesn't exist, creates it with the lines
+        If it does exist, it ensures the order is correct
+
+        This can be used to hack the import order without messing
+        with an easy-install.pth, since using that has/will become less
+        common with the deprecation of setuptools' editable installs
+
+        see:
+        https://github.com/purarue/reorder_editable/issues/2#issuecomment-1868123552
+        """
+        if os.path.exists(self.location):
+            self.lines = self.read_lines()
+            # this can throw a ReorderEditableError if it reorders
+            return self.reorder(lines)
+        else:
+            self.lines = lines
+            self.write_lines(lines)
+            return True  # I guess? this will only happen once, so it is always "edited"
+
+    def assert_ordered(self, expected: list[str]) -> None:
         """
         returns None on success, an Error if the file is not ordered correctly given 'expected'
 
@@ -74,7 +108,7 @@ class Editable:
                 f"Reached the end of the easy-install.pth, but did not encounter '{left}' in the correct order"
             )
 
-    def find_unordered(self, expected: List[str]) -> List[str]:
+    def find_unordered(self, expected: list[str]) -> list[str]:
         """
         Given a list of absolute paths in an expected order, compares that against
         the read order from the easy-install.pth file
@@ -85,7 +119,7 @@ class Editable:
         return self.__class__.find_unordered_pure(self.lines, expected)
 
     @staticmethod
-    def find_unordered_pure(lines: List[str], expected: List[str]) -> List[str]:
+    def find_unordered_pure(lines: list[str], expected: list[str]) -> list[str]:
         """
         Pure function encapsulating all the logic for find_unordered
         """
@@ -102,7 +136,7 @@ class Editable:
 
         return expected[i:]
 
-    def reorder(self, expected: List[str]) -> bool:
+    def reorder(self, expected: list[str]) -> bool:
         """
         If needed, reorder the easy-install.pth
 
@@ -122,13 +156,13 @@ class Editable:
 
     @classmethod
     def reorder_pure(
-        cls, lines: List[str], expected: List[str]
-    ) -> Tuple[bool, List[str]]:
+        cls, lines: list[str], expected: list[str]
+    ) -> tuple[bool, list[str]]:
         """
         Pure function encapsulating all the logic for reordering
         Returns (whether or not to edit the file, resulting changes)
         """
-        unordered: List[str] = cls.find_unordered_pure(lines, expected)
+        unordered: list[str] = cls.find_unordered_pure(lines, expected)
         # everything is ordered right, dont need to reorder anything!
         if len(unordered) == 0:
             return False, lines
@@ -141,7 +175,7 @@ class Editable:
                 f"Provided one or more value(s) which don't appear in the easy-install.pth: {expected_set - lines_set}"
             )
 
-        result: List[str] = []
+        result: list[str] = []
 
         # if an item isn't mentioned in expected, leave it in the same
         # order -- extract all items not mentioned
@@ -160,7 +194,7 @@ class Editable:
         return True, result
 
     @staticmethod
-    def locate_editable(*, use_user_site: bool) -> Optional[str]:
+    def locate_editable(*, use_user_site: bool) -> str | None:
         """
         try to find an editable install path in the user site-packages
         """

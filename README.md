@@ -101,9 +101,48 @@ if Editable().reorder([repo("HPI"), repo("HPI-fork")]):
 
 Note: Either install all editable packages as `--user`, or all at the system level. Otherwise, the lines of text/packages are split across two separate `easy-install.pth` files, and its not possible to reorder.
 
+## Custom editable.pth files
+
+Instead of editing the default `.pth` file (`easy-install.pth`), you can pass a custom location in your user `site` directory, and pass the `--create-custom` flag to create the file if its missing.
+
+The reasoning for this is slightly confusing, and it has some downsides, but it is (as of September 2025) the stopgap I'm using right now until I have an opportunity to test the additional build backends and find out if there's a easier solution.
+
+[setuptools version 25.3 enforces a change](https://github.com/pypa/pip/issues/11457) described as follows:
+
+> The underlying method to achieve an editable install is changing -- the execution of `setup.py develop` when pip does an editable install is being replaced by a standardised interface.
+
+So, depending on the build backend (`setuptools`, `hatch`, `poetry`), as long as a build satisfies the requirements in [PEP 660](https://peps.python.org/pep-0660/), how it installs is not the same, so we can (maybe, depends on how your editable packages are installed) no longer depend on the hack above which just reorders the `easy-install.pth`.
+
+In order to get imports to work in the order we wish to, we can instead depend on the CPython code that processes a `.pth` file [here](https://github.com/python/cpython/blob/5edfe55acf29f7c36f585bcff7f96c244c43f9ae/Lib/site.py#L234-L257), in particular:
+
+```python
+for name in sorted(names):
+    addpackage(sitedir, name, known_paths)
+```
+
+As it sorts the `.pth` files in your site directory, sort of like [`rc`/alphabetical style init systems](https://linux-training.be/sysadmin/ch15.html#idp66138960), we can create `.pth` files like:
+
+```bash
+# ones we create, when `sorted` appear first
+_00_editable.pth
+_01_second.pth
+# ones that are created by setuptools
+__editable__.hpi_purarue-0.0.1.pth
+__editable__.hpi_purarue_personal-0.0.1.pth
+```
+
+and assuming no other build backend creates files that are sorted lexicographically earlier, we can control the order by creating `_00_editble.pth` with contents (like above):
+
+```bash
+/home/username/Repos/purarue/HPI
+/home/username/Repos/karlicoss/HPI
+```
+
+There is a downside, in that if you uninstall one of these packages, the absolute path will still remain in your custom (e.g., `_00_editble.pth` file), so you'd need to manually remove it or follow the workaround described [here](https://github.com/purarue/reorder_editable/issues/2#issuecomment-1868123552).
+
 ## Installation
 
-Requires `python3.9+`
+Requires `python3.10+`
 
 To install with pip, run:
 
