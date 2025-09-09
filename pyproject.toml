@@ -1,7 +1,7 @@
 [project]
 name = "reorder_editable"
-version = "0.1.2"
-description = "naive implementation to reorder my easy-install.pth file"
+version = "0.1.3"
+description = "a naive implementation to reorder .pth files for editable packages"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
