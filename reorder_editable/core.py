@@ -55,7 +55,7 @@ class Editable:
 
         splitlines removes newlines from the end of each line
         """
-        with open(self.location, "r") as src:
+        with open(self.location) as src:
             self.lines = src.read().splitlines()
         return self.lines
 

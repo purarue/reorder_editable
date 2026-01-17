@@ -4,7 +4,7 @@ CLI code, which allows the user to pass relative or absolute paths
 
 import os
 import sys
-from typing import Sequence, Callable
+from collections.abc import Sequence, Callable
 
 import click
 
@@ -56,7 +56,7 @@ def _print_editable_contents(
         editable_pth = chosen_editable
     else:
         editable_pth = _resolve_editable(use_user_site=use_user_site)
-    with open(editable_pth, "r") as src:
+    with open(editable_pth) as src:
         click.echo(src.read(), nl=False, err=stderr)
 
 
@@ -158,7 +158,7 @@ def check(
         )
         if create_custom is True and not os.path.exists(e.location):
             click.echo(
-                (f"Cannot check a non-existing file {e.location} with --create-custom")
+                f"Cannot check a non-existing file {e.location} with --create-custom"
             )
             sys.exit(2)
         e.assert_ordered(dirs)
